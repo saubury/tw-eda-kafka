@@ -205,7 +205,7 @@ kafka-console-consumer --bootstrap-server kafka:29092 --topic RIDESANDUSERSJSON
 # Sink to Elastic/Kibana
 Setup dynamic elastic templates
 ```
-./scripts/04_elastic_dynamic_template
+./scripts/load_elastic_dynamic_template
 ```
 
 
