@@ -1,0 +1,19 @@
+create stream `db-users-raw` WITH (VALUE_FORMAT = 'AVRO', KAFKA_TOPIC = 'db-users');
+
+create stream `db-users_rekeyed` with (partitions=1) as select * from `db-users-raw` partition by userid;
+
+CREATE TABLE users (userid VARCHAR,   username VARCHAR)
+  WITH (KAFKA_TOPIC = 'db-users_rekeyed', VALUE_FORMAT='AVRO',   KEY = 'userid');
+
+create stream riderequeststream WITH (VALUE_FORMAT = 'AVRO', KAFKA_TOPIC = 'riderequest');
+
+create stream ridesandusersjson with (VALUE_FORMAT = 'JSON') as 
+select rr.LATITUDE
+, rr.LONGITUDE
+, rr.RIDEID
+, rr.CITY_NAME
+, u.username  
+, cast(rr.LATITUDE as varchar) + ',' + cast(rr.LONGITUDE as varchar) as LOCATION
+from riderequeststream rr 
+left join users u on u.userid=rr.user 
+emit changes;
