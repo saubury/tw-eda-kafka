@@ -1,0 +1,11 @@
+{
+    "connector.class" : "io.confluent.connect.jdbc.JdbcSourceConnector",
+    "connection.url" : "jdbc:postgresql://postgres:5432/postgres",
+    "mode" : "incrementing",
+    "incrementing.column.name" : "ref",
+    "table.whitelist" : "users",
+    "connection.user" : "postgres",
+    "connection.password" : "Sup3rS3c3t",
+    "topic.prefix" : "db-",
+    "key" : "userid"
+}

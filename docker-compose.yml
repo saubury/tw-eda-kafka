@@ -41,7 +41,7 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 100
       CONFLUENT_METRICS_ENABLE: 'false'
     volumes:
-      - ./scripts:/data/scripts/
+      - ./scripts:/scripts
 
   schema-registry:
     image: "confluentinc/cp-schema-registry:${CONF_VER}"
@@ -84,7 +84,6 @@ services:
       KSQL_CONFLUENT_SUPPORT_METRICS_ENABLE: "false"
     volumes:
       - ./scripts:/scripts
-      - ./ext:/etc/ksql/ext
 
   ksql-cli:
     image: confluentinc/cp-ksql-cli:${CONF_VER}
@@ -94,7 +93,7 @@ services:
     entrypoint: /bin/sh
     tty: true
     volumes:
-      - ./scripts:/data/scripts/
+      - ./scripts:/scripts
 
   kafka-connect:
     container_name: kafka-connect
@@ -132,6 +131,32 @@ services:
     volumes:
       - ./scripts:/scripts
 
+
+  ksql-datagen:
+    image: confluentinc/ksql-examples:${CONF_VER}
+    hostname: ksql-datagen
+    container_name: ksql-datagen
+    depends_on:
+      - ksql-server
+      - kafka
+      - schema-registry
+      - kafka-connect
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
+                        cub kafka-ready -b kafka:29092 1 40 && \
+                        echo Waiting for Confluent Schema Registry to be ready... && \
+                        cub sr-ready schema-registry 8081 40 && \
+                        echo Waiting a few seconds for topic creation to finish... && \
+                        sleep 11 && \
+                        tail -f /dev/null'"
+    environment:
+      KSQL_CONFIG_DIR: "/etc/ksql"
+      KSQL_LOG4J_OPTS: "-Dlog4j.configuration=file:/etc/ksql/log4j-rolling.properties"
+      STREAMS_BOOTSTRAP_SERVERS: kafka:29092
+      STREAMS_SCHEMA_REGISTRY_HOST: schema-registry
+      STREAMS_SCHEMA_REGISTRY_PORT: 8081
+    volumes:
+      - ./scripts:/scripts
+
   postgres:
     container_name: postgres
     image: 'postgres:${PG_VER}'
@@ -159,8 +184,6 @@ services:
     environment:
       TZ: ${TZ_SET}
       discovery.type: 'single-node'
-    extra_hosts:
-      - "moby:127.0.0.1"
 
   kibana:
     container_name: kibana

@@ -1,0 +1,84 @@
+{
+  "namespace": "streams",
+  "name": "riderequest",
+  "type": "record",
+  "fields": [
+    {
+      "name": "requesttime",
+      "type": {
+        "type": "long",
+        "format_as_time": "unix_long",
+        "arg.properties": {
+          "iteration": {
+            "start": 1,
+            "step": 10
+          }
+        }
+      }
+    },
+    {
+      "name": "latitude",
+      "type": {
+        "type": "double",
+        "arg.properties": {
+          "range": {"min": -38.0, "max": -36.0}
+        }
+      }
+    },     
+    {
+      "name": "longitude",
+      "type": {
+        "type": "double",
+        "arg.properties": {
+          "range": {"min": 149.0, "max": 151.1}
+        }
+      }
+    },    
+    {
+      "name": "rideid",
+      "type": {
+        "type": "string",
+        "arg.properties": {
+          "regex": "ride_[1-9][0-9][0-9]"
+        }
+      }
+    },
+    {
+      "name": "user",
+      "type": {
+        "type": "string",
+        "arg.properties": {
+          "options": [
+            "Alice",
+            "Bob",
+            "Carol",
+            "Dan",
+            "Eve",
+            "Frank",
+            "Grace",
+            "Heidi",
+            "Ivan"
+          ]
+        }
+      }
+    },
+    {
+      "name": "city_name",
+      "type": {
+        "type": "string",
+        "arg.properties": {
+          "options": [
+            "Bankstown",
+            "Bondi Beach",
+            "Chatswood",
+            "CBD",
+            "Cronulla",
+            "Manly",
+            "Newcastle",
+            "Liverpool"
+          ]
+        }
+      }
+    }
+  ]
+}
