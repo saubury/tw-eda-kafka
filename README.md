@@ -148,17 +148,11 @@ docker exec -it postgres psql -U postgres -c "INSERT INTO users (userid, usernam
 You _should_ see Jane arrive automatically into the Kafka topic
 
 
-# TO DO
-WIP below here!
-
 
 
 ## Generate random data
 ```
-docker-compose exec ksql-datagen ksql-datagen schema=/scripts/userprofile.avro format=json topic=USUPAVRO key=userid maxInterval=5000 iterations=100 bootstrap-server=kafka:29092 schemaRegistryUrl=http://schema-registry:8081 value-format=avro
-
-
-docker-compose exec ksql-datagen ksql-datagen schema=/scripts/riderequest.avro  format=avro topic=riderequest key=rideid maxInterval=5000 iterations=100 bootstrap-server=kafka:29092 schemaRegistryUrl=http://schema-registry:8081 value-format=avro
+docker-compose exec ksql-datagen ksql-datagen schema=/scripts/riderequest.avro  format=avro topic=riderequest key=rideid maxInterval=5000 iterations=1000 bootstrap-server=kafka:29092 schemaRegistryUrl=http://schema-registry:8081 value-format=avro
 ```
 
 BTW, this is AVRO
@@ -166,6 +160,72 @@ BTW, this is AVRO
 curl -s -X GET http://localhost:8081/subjects/USUPAVRO-value/versions/1 | jq '.'
 ```
 
+# Build a transformer
+We wish to consume from the `riderequest` and `db-users` topics, join them and produce into a new topic
+
+## ksqlDB CLI
+```
+docker-compose exec ksql-cli ksql http://ksql-server:8088
+```
+
+```
+print `db-users` from beginning;
+
+create stream `db-users-raw` WITH (VALUE_FORMAT = 'AVRO', KAFKA_TOPIC = 'db-users');
+
+create stream `db-users_rekeyed` with (partitions=1) as select * from `db-users-raw` partition by userid;
+
+CREATE TABLE users (userid VARCHAR,   username VARCHAR)
+  WITH (KAFKA_TOPIC = 'db-users_rekeyed', VALUE_FORMAT='AVRO',   KEY = 'userid');
+
+select userid, username from users where userid='A' emit changes;
+
+
+create stream riderequeststream WITH (VALUE_FORMAT = 'AVRO', KAFKA_TOPIC = 'riderequest');
+
+select * from riderequeststream emit changes;
+
+create stream ridesandusersjson with (VALUE_FORMAT = 'JSON') as 
+select rr.LATITUDE
+, rr.LONGITUDE
+, rr.RIDEID
+, rr.CITY_NAME
+, u.username  
+, cast(rr.LATITUDE as varchar) + ',' + cast(rr.LONGITUDE as varchar) as LOCATION
+from riderequeststream rr 
+left join users u on u.userid=rr.user 
+emit changes;
+```
+
+And if you want to check
+```
+kafka-console-consumer --bootstrap-server kafka:29092 --topic RIDESANDUSERSJSON
+```
+
+# Sink to Elastic/Kibana
+Setup dynamic elastic templates
+```
+./scripts/04_elastic_dynamic_template
+```
+
+
+Load connect config
+```
+curl -k -s -S -X PUT -H "Accept: application/json" -H "Content-Type: application/json" --data @./scripts/connect_sink_elastic.json http://localhost:8083/connectors/sink_elastic/config
+```
+
+```
+curl -s -X GET http://localhost:8083/connectors/sink_elastic/status | jq '.'
+```
+
+
+## Kibana Dashboard Import
+
+- Navigate to http://localhost:5601/app/kibana#/management/kibana/objects
+
+
+# TO DO
+WIP below here!
 
 
 # Create topics

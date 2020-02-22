@@ -49,15 +49,15 @@
         "type": "string",
         "arg.properties": {
           "options": [
-            "Alice",
-            "Bob",
-            "Carol",
-            "Dan",
-            "Eve",
-            "Frank",
-            "Grace",
-            "Heidi",
-            "Ivan"
+            "A",
+            "B",
+            "C",
+            "D",
+            "E",
+            "F",
+            "G",
+            "H",
+            "I"
           ]
         }
       }
