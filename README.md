@@ -2,9 +2,18 @@
 # Get started
 
 ## Prerequisites & setup
-- clone this repo!
+
 - install docker/docker-compose
 - set your Docker maximum memory to something really big, such as 10GB. (preferences -> advanced -> memory)
+- clone this repo!
+
+```
+mkdir ~/git
+cd ~/git
+git clone https://github.com/saubury/tw-eda-kafka.git
+cd tw-eda-kafka
+```
+
 
 ## Docker Startup
 ```
@@ -13,6 +22,10 @@ docker-compose -d
 
 
 # Basic Producers and Consuners
+
+![Kafka API ](docs/kafka-api.png "Kafka API")
+
+
 ```
 docker-compose exec kafka-connect bash
 ```
@@ -50,6 +63,10 @@ What have we learnt?  It's easy to be a producer or consumer.  Out of the box Ka
 
 # Structured Data with AVRO
 
+
+![Kafka Schema Registry ](docs/schema-registry.png "Kafka Schema Registry")
+
+
 At UNIX prompt
 ```
 kafka-topics --bootstrap-server kafka:29092 --create --partitions 1 --replication-factor 1 --topic COMPLAINTS_AVRO
@@ -76,6 +93,7 @@ curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions/1
 ```
 
 ## AVRO Schema Evolution
+Let's add a loyality concept to our complaints topic - we'll add "number_of_rides" to the payload
 
 At UNIX prompt
 ```
@@ -96,7 +114,10 @@ kafka-avro-console-producer  --broker-list kafka:29092 --property schema.registr
 }' << EOF
 {"customer_name":"Ed", "complaint_type":"Dirty car", "trip_cost": 29.10, "new_customer": false, "number_of_rides": 22}
 EOF
+```
 
+Let's see what schemas we have registered now
+```
 curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions
 
 curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions/1 | jq '.'
@@ -105,7 +126,9 @@ curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions/2 |
 ```
 
 # Kafka Connect
-## Setup Postgres database
+Let's copy data from an upstream database which has a list of ride users.  Connecting Kafka to and from other systems (such as a database or object store) is a very common task.  The Kafka Connect framework has a plug in archecture which allows you to _source_ from an upstream system or _sink_ into a downstream system.  
+
+## Setup Postgres source database
 
 ```
 cat scripts/postgres-setup.sql
@@ -121,8 +144,8 @@ docker-compose exec postgres psql -U postgres -c "select * from users;"
 
 
 
-## Manual Kafka Connect Setup
-Our goal now is to build a process to copy data continuously from out Postgres database into Kafka.  We'll use Kafka connect as the framework, and a JDBC Postgres Source connector to connect to the database
+## Kafka Connect Setup
+Our goal now is to source data continuously from our Postgres database and produce into Kafka.  We'll use Kafka connect as the framework, and a JDBC Postgres Source connector to connect to the database
 
 
 Have a look at `scripts/connect_source_postgres.json`
@@ -150,7 +173,9 @@ You _should_ see Jane arrive automatically into the Kafka topic
 
 
 
-## Generate random data
+# Generate ride request data
+Create a stream of rider requests
+
 ```
 docker-compose exec ksql-datagen ksql-datagen schema=/scripts/riderequest.avro  format=avro topic=riderequest key=rideid maxInterval=5000 iterations=1000 bootstrap-server=kafka:29092 schemaRegistryUrl=http://schema-registry:8081 value-format=avro
 ```
@@ -160,8 +185,12 @@ BTW, this is AVRO
 curl -s -X GET http://localhost:8081/subjects/USUPAVRO-value/versions/1 | jq '.'
 ```
 
-# Build a transformer
-We wish to consume from the `riderequest` and `db-users` topics, join them and produce into a new topic
+# Build a stream processor
+We have a constant steam of rider requests arriving in the `riderequest` topic.  But each request has only a `userid` (such as `J`) and no name (like `Jane`).  Also, the rider location has seperate latitide and longtitude fields; we want to be able to join them together as single string field (to form a geom - `cast(rr.LATITUDE as varchar) || ',' || cast(rr.LONGITUDE as varchar)`)
+
+Let's build a stream processor to consume from the `riderequest` topic and `db-users` topics, join them and produce into a new topic along with a new location attribute.  
+
+Will build our stream processor in ksql.
 
 ## ksqlDB CLI
 ```
