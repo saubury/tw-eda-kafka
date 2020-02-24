@@ -53,3 +53,15 @@ curl -XPUT "http://${HOST}/_template/kafkaconnect/" -H 'Content-Type: applicatio
 }'
 
 echo
+echo
+
+
+curl -XPOST 'http://localhost:5601/api/saved_objects/index-pattern/ridesandusersjson_idx' \
+    -H 'kbn-xsrf: nevergonnagiveyouup' \
+    -H 'Content-Type: application/json' \
+    -d '{"attributes":{"title":"ridesandusersjson*","timeFieldName":"EVENT_TS"}}'
+
+
+echo
+echo
+

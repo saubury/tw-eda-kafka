@@ -14,10 +14,15 @@ git clone https://github.com/saubury/tw-eda-kafka.git
 cd tw-eda-kafka
 ```
 
+## How you'll work
+You'll need _three_ terminals for these exercises. Each one you should `cd ~/git/tw-eda-kafka`
+
+For simplicity arrange your three terminals so you can see the first and second at the same time (perhaps split horizontally if you're using iTerm2)
 
 ## Docker Startup
+**Terminal 1**
 ```
-docker-compose -d
+docker-compose up -d 
 ```
 
 
@@ -25,11 +30,10 @@ docker-compose -d
 
 ![Kafka API ](docs/kafka-api.png "Kafka API")
 
-
+**Terminal 1**
 ```
 docker-compose exec kafka-connect bash
 ```
-
 
 Create a topic
 ```
@@ -41,12 +45,16 @@ Check it's there
 kafka-topics --list --bootstrap-server kafka:29092
 ```
 
-In the first (original) terminal write some text from STDIN
+**Terminal 1**
+
+Write some text from STDIN
 ```
 kafka-console-producer --broker-list kafka:29092 --topic MYTOPIC
 ```
 Now type some things into first (original) terminal (and press ENTER).  
 
+
+**Terminal 2**
 
 Start another terminal
 ```
@@ -66,6 +74,8 @@ What have we learnt?  It's easy to be a producer or consumer.  Out of the box Ka
 
 ![Kafka Schema Registry ](docs/schema-registry.png "Kafka Schema Registry")
 
+
+**Terminal 1**
 
 At UNIX prompt
 ```
@@ -87,6 +97,8 @@ kafka-avro-console-producer  --broker-list kafka:29092 --property schema.registr
 EOF
 ```
 
+**Terminal 2**
+
 BTW, this is AVRO
 ```
 curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions/1
@@ -95,10 +107,15 @@ curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions/1
 ## AVRO Schema Evolution
 Let's add a loyality concept to our complaints topic - we'll add "number_of_rides" to the payload
 
+**Terminal 2**
+
 At UNIX prompt
 ```
 curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions
+```
 
+**Terminal 1**
+```
 kafka-avro-console-producer  --broker-list kafka:29092 --property schema.registry.url="http://schema-registry:8081"  --topic COMPLAINTS_AVRO \
 --property value.schema='
 {
@@ -115,6 +132,8 @@ kafka-avro-console-producer  --broker-list kafka:29092 --property schema.registr
 {"customer_name":"Ed", "complaint_type":"Dirty car", "trip_cost": 29.10, "new_customer": false, "number_of_rides": 22}
 EOF
 ```
+
+**Terminal 2**
 
 Let's see what schemas we have registered now
 ```
@@ -159,10 +178,14 @@ curl -k -s -S -X PUT -H "Accept: application/json" -H "Content-Type: application
 curl -s -X GET http://localhost:8083/connectors/src_pg/status | jq '.'
 ```
 
+**Terminal 1**
+
 Now let's check
 ```
 kafka-avro-console-consumer --bootstrap-server kafka:29092 --topic db-users --from-beginning --property  schema.registry.url="http://schema-registry:8081"
 ```
+
+**Terminal 2**
 
 Insert a new database row into Postgres
 ```
@@ -176,13 +199,15 @@ You _should_ see Jane arrive automatically into the Kafka topic
 # Generate ride request data
 Create a stream of rider requests
 
+**Terminal 3**
 ```
 docker-compose exec ksql-datagen ksql-datagen schema=/scripts/riderequest.avro  format=avro topic=riderequest key=rideid maxInterval=5000 iterations=1000 bootstrap-server=kafka:29092 schemaRegistryUrl=http://schema-registry:8081 value-format=avro
 ```
 
-BTW, this is AVRO
+Check the AVRO output of the `riderequest` topic. Press ^C when you've seen a few records.
+
 ```
-curl -s -X GET http://localhost:8081/subjects/USUPAVRO-value/versions/1 | jq '.'
+kafka-avro-console-consumer --bootstrap-server kafka:29092 --topic riderequest --from-beginning --property  schema.registry.url="http://schema-registry:8081"
 ```
 
 # Build a stream processor
@@ -193,6 +218,10 @@ Let's build a stream processor to consume from the `riderequest` topic and `db-u
 Will build our stream processor in ksql.
 
 ## ksqlDB CLI
+Build a stream processor 
+
+**Terminal 2**
+
 ```
 docker-compose exec ksql-cli ksql http://ksql-server:8088
 ```
@@ -207,12 +236,17 @@ exit;
 ```
 
 And if you want to check
+
+**Terminal 1**
+
 ```
 kafka-console-consumer --bootstrap-server kafka:29092 --topic RIDESANDUSERSJSON
 ```
 
 # Sink to Elastic/Kibana
 Setup dynamic elastic templates
+
+**Terminal 2**
 ```
 ./scripts/load_elastic_dynamic_template
 ```
@@ -227,16 +261,13 @@ curl -k -s -S -X PUT -H "Accept: application/json" -H "Content-Type: application
 curl -s -X GET http://localhost:8083/connectors/sink_elastic/status | jq '.'
 ```
 
-
 ## Kibana Dashboard Import
 
 - Navigate to http://localhost:5601/app/kibana#/management/kibana/objects
+- Click Import
+- Select file 06_kibana_export.json
+- Click Automatically overwrite all saved objects? and select Yes, overwrite all objects
+- Kibana - Open Dashboard
+- Open http://localhost:5601/app/kibana#/dashboards
 
-
-# TO DO
-WIP below here!
-
-
-
-![Kafka Connect with ksqlDB ](docs/kafka-connect-secrets.png "Kafka Connect with ksqlDB")
 
