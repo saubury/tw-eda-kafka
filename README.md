@@ -17,7 +17,9 @@ cd tw-eda-kafka
 ## How you'll work
 You'll need _three_ terminals for these exercises. Each one you should `cd ~/git/tw-eda-kafka`
 
-For simplicity arrange your three terminals so you can see the first and second at the same time (perhaps split horizontally if you're using iTerm2)
+For simplicity arrange your three terminals so you can see the first and second at the same time (perhaps split horizontally if you're using iTerm2) Something like below.
+
+![Terminals ](docs/Terminals-Arrangment.png "Terminal Arrangement")
 
 ## Docker Startup
 **Terminal 1**
