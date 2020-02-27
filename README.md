@@ -28,7 +28,7 @@ docker-compose up -d
 ```
 
 
-# Basic Producers and Consuners
+# Basic Producers and Consumers
 
 ![Kafka API ](docs/kafka-api.png "Kafka API")
 
@@ -47,16 +47,20 @@ Check it's there
 kafka-topics --list --bootstrap-server kafka:29092
 ```
 
-**Terminal 1**
+*Create a Producer*
 
 Write some text from STDIN
+
 ```
 kafka-console-producer --broker-list kafka:29092 --topic MYTOPIC
 ```
+
 Now type some things into first (original) terminal (and press ENTER).  
 
 
 **Terminal 2**
+
+*Create a Consumer*
 
 Start another terminal
 ```
@@ -112,7 +116,8 @@ curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions/1
 ## AVRO Schema Evolution
 Let's add a loyality concept to our complaints topic - we'll add "number_of_rides" to the payload
 
-**Terminal 1**
+**Terminal 1** 
+
 ```
 kafka-avro-console-producer  --broker-list kafka:29092 --property schema.registry.url="http://schema-registry:8081"  --topic COMPLAINTS_AVRO \
 --property value.schema='
