@@ -187,12 +187,8 @@ curl -s -X GET http://localhost:8083/connectors/src_pg/status | jq '.'
 
 **Terminal 2**
 
-Note: If you have exited the kafka-connect container, enter inside the container again by running 
-```
-docker-compose exec kafka-connect bash
-```
+Now let's consume the topic by starting a consumer inside the kafka-connect container to 
 
-Now let's check
 ```
 kafka-avro-console-consumer --bootstrap-server kafka:29092 --topic db-users --from-beginning --property  schema.registry.url="http://schema-registry:8081"
 ```
@@ -216,6 +212,7 @@ Create a stream of rider requests
 docker-compose exec ksql-datagen ksql-datagen schema=/scripts/riderequest.avro  format=avro topic=riderequest key=rideid maxInterval=5000 iterations=1000 bootstrap-server=kafka:29092 schemaRegistryUrl=http://schema-registry:8081 value-format=avro
 ```
 
+In Terminal 2, (Exit the existing consumer by pressing Ctrl+C) 
 Check the AVRO output of the `riderequest` topic. Press ^C when you've seen a few records.
 
 ```
@@ -249,8 +246,7 @@ exit;
 
 And if you want to check
 
-**Terminal 1**
-
+**Terminal 1** from inside the Kafka-connect container
 ```
 kafka-console-consumer --bootstrap-server kafka:29092 --topic RIDESANDUSERSJSON
 ```
@@ -259,12 +255,16 @@ kafka-console-consumer --bootstrap-server kafka:29092 --topic RIDESANDUSERSJSON
 Setup dynamic elastic templates
 
 **Terminal 2**
+
+At the console prompt
+
 ```
 ./scripts/load_elastic_dynamic_template
 ```
 
+Now we need a sink connector to read from the topic RIDESANDUSERSJSON
 
-Load connect config
+Load connect config.
 ```
 curl -k -s -S -X PUT -H "Accept: application/json" -H "Content-Type: application/json" --data @./scripts/connect_sink_elastic.json http://localhost:8083/connectors/sink_elastic/config
 ```
