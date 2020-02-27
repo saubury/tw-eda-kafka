@@ -79,7 +79,7 @@ What have we learnt?  It's easy to be a producer or consumer.  Out of the box Ka
 
 **Terminal 1**
 
-At UNIX prompt
+At UNIX prompt, (Note: Press Ctrl C to exit the producer script)
 ```
 kafka-topics --bootstrap-server kafka:29092 --create --partitions 1 --replication-factor 1 --topic COMPLAINTS_AVRO
 
@@ -101,20 +101,16 @@ EOF
 
 **Terminal 2**
 
+Press Ctrl+C and Ctrl+D and run the following curl command.
+
 BTW, this is AVRO
+
 ```
 curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions/1
 ```
 
 ## AVRO Schema Evolution
 Let's add a loyality concept to our complaints topic - we'll add "number_of_rides" to the payload
-
-**Terminal 2**
-
-At UNIX prompt
-```
-curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions
-```
 
 **Terminal 1**
 ```
@@ -144,12 +140,21 @@ curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions
 curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions/1 | jq '.'
 
 curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions/2 | jq '.'
+
+or you can also use:
+
+curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions/2 | jq -r .schema | jq .
+
 ```
 
 # Kafka Connect
 Let's copy data from an upstream database which has a list of ride users.  Connecting Kafka to and from other systems (such as a database or object store) is a very common task.  The Kafka Connect framework has a plug in archecture which allows you to _source_ from an upstream system or _sink_ into a downstream system.  
 
 ## Setup Postgres source database
+
+**in Terminal 1:** 
+
+Exit the kafka-connect container by pressing Ctrl+D.
 
 ```
 cat scripts/postgres-setup.sql
@@ -166,7 +171,7 @@ docker-compose exec postgres psql -U postgres -c "select * from users;"
 
 
 ## Kafka Connect Setup
-Our goal now is to source data continuously from our Postgres database and produce into Kafka.  We'll use Kafka connect as the framework, and a JDBC Postgres Source connector to connect to the database
+Our goal now is to source data continuously from our Postgres database and produce into Kafka.  We'll use Kafka connect as the framework, and a JDBC Postgres Source connector coto connect to the database
 
 
 Have a look at `scripts/connect_source_postgres.json`
@@ -180,14 +185,19 @@ curl -k -s -S -X PUT -H "Accept: application/json" -H "Content-Type: application
 curl -s -X GET http://localhost:8083/connectors/src_pg/status | jq '.'
 ```
 
-**Terminal 1**
+**Terminal 2**
+
+Note: If you have exited the kafka-connect container, enter inside the container again by running 
+```
+docker-compose exec kafka-connect bash
+```
 
 Now let's check
 ```
 kafka-avro-console-consumer --bootstrap-server kafka:29092 --topic db-users --from-beginning --property  schema.registry.url="http://schema-registry:8081"
 ```
 
-**Terminal 2**
+**Terminal 1**
 
 Insert a new database row into Postgres
 ```
