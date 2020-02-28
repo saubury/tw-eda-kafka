@@ -33,17 +33,17 @@ docker-compose up -d
 ![Kafka API ](docs/kafka-api.png "Kafka API")
 
 **Terminal 1**
-```
+```console
 docker-compose exec kafka-connect bash
 ```
 
 Create a topic
-```
+```console
 kafka-topics --bootstrap-server kafka:29092 --create --partitions 1 --replication-factor 1 --topic MYTOPIC
 ```
 
 Check it's there 
-```
+```console
 kafka-topics --list --bootstrap-server kafka:29092
 ```
 
@@ -51,7 +51,7 @@ kafka-topics --list --bootstrap-server kafka:29092
 
 Write some text from STDIN
 
-```
+```console
 kafka-console-producer --broker-list kafka:29092 --topic MYTOPIC
 ```
 
@@ -63,12 +63,12 @@ Now type some things into first (original) terminal (and press ENTER).
 *Create a Consumer*
 
 Start another terminal
-```
+```console
 docker-compose exec kafka-connect bash
 ```
 
 In the newly created (second) terminal let's start reading from new Kafka topic
-```
+```console
 kafka-console-consumer --bootstrap-server kafka:29092 --topic MYTOPIC --from-beginning
 ```
 Each line you type in the first terminal should appear in second terminal
@@ -84,7 +84,7 @@ What have we learnt?  It's easy to be a producer or consumer.  Out of the box Ka
 **Terminal 1**
 
 At UNIX prompt, (Note: Press Ctrl C to exit the producer script)
-```
+```console
 kafka-topics --bootstrap-server kafka:29092 --create --partitions 1 --replication-factor 1 --topic COMPLAINTS_AVRO
 
 kafka-avro-console-producer  --broker-list kafka:29092 --property schema.registry.url="http://schema-registry:8081"  --topic COMPLAINTS_AVRO \
@@ -109,7 +109,7 @@ Press Ctrl+C and Ctrl+D and run the following curl command.
 
 BTW, this is AVRO
 
-```
+```console
 curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions/1
 ```
 
@@ -118,7 +118,7 @@ Let's add a loyality concept to our complaints topic - we'll add "number_of_ride
 
 **Terminal 1** 
 
-```
+```console
 kafka-avro-console-producer  --broker-list kafka:29092 --property schema.registry.url="http://schema-registry:8081"  --topic COMPLAINTS_AVRO \
 --property value.schema='
 {
@@ -139,7 +139,7 @@ EOF
 **Terminal 2**
 
 Let's see what schemas we have registered now
-```
+```console
 curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions
 
 curl -s -X GET http://localhost:8081/subjects/COMPLAINTS_AVRO-value/versions/1 | jq '.'
@@ -161,14 +161,14 @@ Let's copy data from an upstream database which has a list of ride users.  Conne
 
 Exit the kafka-connect container by pressing Ctrl+D.
 
-```
+```console
 cat scripts/postgres-setup.sql
 
 docker-compose exec postgres psql -U postgres -f /scripts/postgres-setup.sql
 ```
 
 To look at the Postgres table
-```
+```console
 docker-compose exec postgres psql -U postgres -c "select * from users;"
 ```
 
@@ -182,7 +182,7 @@ Our goal now is to source data continuously from our Postgres database and produ
 Have a look at `scripts/connect_source_postgres.json`
 
 Load connect config
-```
+```console
 curl -k -s -S -X PUT -H "Accept: application/json" -H "Content-Type: application/json" --data @./scripts/connect_source_postgres.json http://localhost:8083/connectors/src_pg/config
 ```
 
@@ -194,14 +194,14 @@ curl -s -X GET http://localhost:8083/connectors/src_pg/status | jq '.'
 
 Now let's consume the topic by starting a consumer inside the kafka-connect container to 
 
-```
+```console
 kafka-avro-console-consumer --bootstrap-server kafka:29092 --topic db-users --from-beginning --property  schema.registry.url="http://schema-registry:8081"
 ```
 
 **Terminal 1**
 
 Insert a new database row into Postgres
-```
+```console
 docker exec -it postgres psql -U postgres -c "INSERT INTO users (userid, username) VALUES ('J', 'Jane');"
 ```
 You _should_ see Jane arrive automatically into the Kafka topic
@@ -213,14 +213,14 @@ You _should_ see Jane arrive automatically into the Kafka topic
 Create a stream of rider requests
 
 **Terminal 3**
-```
+```console
 docker-compose exec ksql-datagen ksql-datagen schema=/scripts/riderequest.avro  format=avro topic=riderequest key=rideid maxInterval=5000 iterations=1000 bootstrap-server=kafka:29092 schemaRegistryUrl=http://schema-registry:8081 value-format=avro
 ```
 
 In Terminal 2, (Exit the existing consumer by pressing Ctrl+C) 
 Check the AVRO output of the `riderequest` topic. Press ^C when you've seen a few records.
 
-```
+```console
 kafka-avro-console-consumer --bootstrap-server kafka:29092 --topic riderequest --from-beginning --property  schema.registry.url="http://schema-registry:8081"
 ```
 
@@ -236,13 +236,13 @@ Build a stream processor
 
 **Terminal 2**
 
-```
+```console
 docker-compose exec ksql-cli ksql http://ksql-server:8088
 ```
 
 Run the KSQL script: 
 
-```
+```console
 ksql
 ksql> run script '/scripts/join_topics.ksql';
 exit;
@@ -252,7 +252,7 @@ exit;
 And if you want to check
 
 **Terminal 1** from inside the Kafka-connect container
-```
+```console
 kafka-console-consumer --bootstrap-server kafka:29092 --topic RIDESANDUSERSJSON
 ```
 
@@ -263,18 +263,18 @@ Setup dynamic elastic templates
 
 At the console prompt
 
-```
+```console
 ./scripts/load_elastic_dynamic_template
 ```
 
 Now we need a sink connector to read from the topic RIDESANDUSERSJSON
 
 Load connect config.
-```
+```console
 curl -k -s -S -X PUT -H "Accept: application/json" -H "Content-Type: application/json" --data @./scripts/connect_sink_elastic.json http://localhost:8083/connectors/sink_elastic/config
 ```
 
-```
+```console
 curl -s -X GET http://localhost:8083/connectors/sink_elastic/status | jq '.'
 ```
 
