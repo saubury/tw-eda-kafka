@@ -7,7 +7,7 @@
 - set your Docker maximum memory to something really big, such as 10GB. (preferences -> advanced -> memory)
 - clone this repo!
 
-```
+```console
 mkdir ~/git
 cd ~/git
 git clone https://github.com/saubury/tw-eda-kafka.git
@@ -23,7 +23,7 @@ For simplicity arrange your three terminals so you can see the first and second 
 
 ## Docker Startup
 **Terminal 1**
-```
+```console
 docker-compose up -d 
 ```
 
